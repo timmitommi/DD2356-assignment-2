@@ -37,18 +37,20 @@ int main() {
 
     //Parallel section
     #pragma omp parallel for
-    for (int i=0; i < N; i++){
+    for (int i=0; i < N; i++) { 
+      #pragma omp critical 
+      {
         if (x[i] > maxval) {
-              maxval = x[i]; 
-              maxloc = i;
-        }
+          maxval = x[i]; 
+          maxloc = i;
+        } 
+      }
     }
 
     t2 = mysecond();
     printf("---------------------------------------\n");
     printf("Time=%11.8f\nFound maxval=%f\nFound maxloc=%d\n", (t2 - t1), maxval, maxloc);
   }
-  
   return 0;
 }
 
