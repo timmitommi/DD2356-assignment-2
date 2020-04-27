@@ -33,10 +33,9 @@
 	// print the results of the DFT
 	int printResults(double* xr, double* xi, int N);
 
-
 	int main(int argc, char* argv[]){
 	  // size of input array
-	  int N = 8000; // 8,000 is a good number for testing
+	  int N = 10000; // 8,000 is a good number for testing
 	  printf("DFTW calculation with N = %d \n",N);
 	  
 	  // Allocate array for input vector
@@ -88,32 +87,32 @@
 	// DFT/IDFT routine
 	// idft: 1 direct DFT, -1 inverse IDFT (Inverse DFT)
 	int DFT(int idft, double* xr, double* xi, double* Xr_o, double* Xi_o, int N){
-	  for (int k=0 ; k<N ; k++)
-	    {
-          double thread_results_r[MAX_THREADS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-          double thread_results_i[MAX_THREADS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-          
-          #pragma omp parallel for schedule(static)
-          for (int n=0; n<N; n++) {
-            int id = omp_get_thread_num();
-            thread_results_r[id] += xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N);
-            thread_results_i[id] += -idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N);
-          }
+    double thread_results_r[N][MAX_THREADS]; 
+    double thread_results_i[N][MAX_THREADS]; 
+    
+    #pragma omp parallel for schedule(static)
+    for (int i=0; i<N*N; i++) {
+      int k=i/N;
+      int n=i%N;
+      int id = omp_get_thread_num();
+      if (idft==-1){
+        thread_results_r[k][id] += (xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N))/N;
+        thread_results_i[k][id] += (-idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N))/N;
+      }
+      else {
+        thread_results_r[k][id] += xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N);
+        thread_results_i[k][id] += -idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N);
+      }
+    }
 
-          for (int id=0; id < MAX_THREADS; id++) {
-            Xr_o[k] += thread_results_r[id];
-            Xi_o[k] += thread_results_i[id];
-          }
-	    }
+    #pragma omp parallel for schedule(static)
+    for (int k=0; k < N; k++) {
+      for (int id=0; id < MAX_THREADS; id++) {
+        Xr_o[k] += thread_results_r[k][id];
+        Xi_o[k] += thread_results_i[k][id];
+      }
+    }	    
 	    
-	    // normalize if you are doing IDFT
-	    if (idft==-1){
-        #pragma omp parallel for schedule(static)
-	    	for (int n=0 ; n<N ; n++){
-	    	Xr_o[n] /=N;
-	    	Xi_o[n] /=N;
-	    }
-	    }
 	  return 1; 
 	}
 	
@@ -122,8 +121,10 @@
     // rand() is NOT thread safe in case
 	int fillInput(double* xr, double* xi, int N){
 	    srand(time(0));
+      #pragma omp parallel for schedule(static)
 	    for(int n=0; n < 100000;n++) // get some random number first 
 	    	rand();
+      #pragma omp parallel for schedule(static)
 	    for(int n=0; n < N;n++){
 	       // Generate random discrete-time signal x in range (-1,+1)
 	       //xr[n] = ((double)(2.0 * rand()) / RAND_MAX) - 1.0;
@@ -137,6 +138,7 @@
 
 	// set to zero the output vector
 	int setOutputZero(double* Xr_o, double* Xi_o, int N){
+    #pragma omp parallel for schedule(static)
     for(int n=0; n < N;n++){
           Xr_o[n] = 0.0;
           Xi_o[n] = 0.0; 
@@ -148,6 +150,7 @@
 	int checkResults(double* xr, double* xi, double* xr_check, double* xi_check, double* Xr_o, double* Xi_r, int N){
 		// x[0] and x[1] have typical rounding error problem
 		// interesting there might be a theorem on this
+    #pragma omp parallel for schedule(static)
 		for(int n=0; n < N;n++){
 			if (fabs(xr[n] - xr_check[n]) > R_ERROR)
 			    printf("ERROR - x[%d] = %f, inv(X)[%d]=%f \n",n,xr[n], n,xr_check[n]);
@@ -161,6 +164,7 @@
 
 	// print the results of the DFT
 	int printResults(double* xr, double* xi, int N){
+    #pragma omp parallel for schedule(static)
 		for(int n=0; n < N;n++)
 			    printf("Xre[%d] = %f, Xim[%d] = %f \n", n, xr[n], n, xi[n]);
 		return 1;
