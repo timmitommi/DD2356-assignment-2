@@ -30,41 +30,39 @@ int main() {
 
   printf("Real maxval = %f\nReal maxloc = %d\n", realmaxval, realmaxloc);
 
-  //repeat the experiment REPS times 
-  for (int j=0; j < REPS; j++) {
-    double maxvals[MAX_THREADS], maxval;
-    int maxlocs[MAX_THREADS], maxloc;
+  double maxvals[MAX_THREADS], maxval;
+  int maxlocs[MAX_THREADS], maxloc;
   
-    t1 = mysecond();
+  t1 = mysecond();
 
-    //Parallel section
-    #pragma omp parallel shared(maxval, maxloc)
-    { 
-      int id = omp_get_thread_num();
-      maxvals[id] = -1.0e30;
-      #pragma omp for
-        for (int i=0; i < N; i++) { 
-          if (x[i] > maxvals[id]) {
-            maxvals[id] = x[i]; 
-            maxlocs[id] = i;
-          } 
-        }
-      
-    }
-  
-    maxloc = maxlocs[0];
-    maxval = maxvals[0];
-    for (int i = 0; i < MAX_THREADS; i++) {
-      if (maxvals[i] > maxval) {
-        maxval = maxvals[i];
-        maxloc = maxlocs[i];
+  //Parallel section
+  #pragma omp parallel
+  { 
+    int id = omp_get_thread_num();
+    maxvals[id] = -1.0e30;
+    #pragma omp for
+      for (int i=0; i < N; i++) { 
+        if (x[i] > maxvals[id]) {
+          maxvals[id] = x[i]; 
+          maxlocs[id] = i;
+        } 
       }
-    }
     
-    t2 = mysecond();
-    printf("---------------------------------------\n");
-    printf("Time=%11.8f\nFound maxval=%f\nFound maxloc=%d\n", (t2 - t1), maxval, maxloc);
   }
+
+  maxloc = maxlocs[0];
+  maxval = maxvals[0];
+  for (int i = 0; i < MAX_THREADS; i++) {
+    if (maxvals[i] > maxval) {
+      maxval = maxvals[i];
+      maxloc = maxlocs[i];
+    }
+  }
+  
+  t2 = mysecond();
+  printf("Time=%11.8f\nFound maxval=%f\nFound maxloc=%d\n", (t2 - t1), maxval, maxloc);
+  printf("---------------------------------------\n");
+
   return 0;
 }
 
