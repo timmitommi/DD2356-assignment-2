@@ -95,14 +95,8 @@
       int k=i/N;
       int n=i%N;
       int id = omp_get_thread_num();
-      if (idft==-1){
-        thread_results_r[k][id] += (xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N))/N;
-        thread_results_i[k][id] += (-idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N))/N;
-      }
-      else {
-        thread_results_r[k][id] += xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N);
-        thread_results_i[k][id] += -idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N);
-      }
+      thread_results_r[k][id] += xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N);
+      thread_results_i[k][id] += -idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N);
     }
 
     #pragma omp parallel for schedule(static)
@@ -110,6 +104,10 @@
       for (int id=0; id < MAX_THREADS; id++) {
         Xr_o[k] += thread_results_r[k][id];
         Xi_o[k] += thread_results_i[k][id];
+      }
+      if (idft==-1) {
+        Xr_o[k] /=N;
+        Xi_o[k] /=N;
       }
     }	    
 	    
