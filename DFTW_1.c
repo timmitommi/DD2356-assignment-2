@@ -19,6 +19,8 @@
 	// this for the rounding error, increasing N rounding error increases
     // 0.01 precision good for N > 8000
 	#define R_ERROR 0.01
+
+  #define MAX_THREADS 32
 	
 	// main routine to calculate DFT
 	int DFT(int idft, double* xr, double* xi, double* Xr_o, double* Xi_o, int N);
@@ -34,7 +36,7 @@
 
 	int main(int argc, char* argv[]){
 	  // size of input array
-	  int N = 8000; // 8,000 is a good number for testing
+	  int N = 4; // 8,000 is a good number for testing
 	  printf("DFTW calculation with N = %d \n",N);
 	  
 	  // Allocate array for input vector
@@ -93,8 +95,25 @@
 	            Xr_o[k] += xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N);
 	            // Imaginary part of X[k]
 	            Xi_o[k] += -idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N);
-	            
 	        } 
+          printf("%f\n", Xi_o[k]);
+          double thread_results_r[MAX_THREADS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+          double thread_results_i[MAX_THREADS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+          #pragma omp parallel for
+          for (int n=0; n<N; n++) {
+            int id = omp_get_thread_num();
+            thread_results_r[id] += xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N);
+            thread_results_i[id] += -idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N);
+          }
+
+          double res = 0;
+          for (int i=0; i < 4; i++) {
+            res += thread_results_i[i];
+          }
+          printf("%f\n", res);
+
+          printf("%f %f %f %f\n", thread_results_i[0], thread_results_i[1], thread_results_i[2], thread_results_i[3]);
+          printf("--------------------------------------\n");
 	    }
 	    
 	    // normalize if you are doing IDFT
@@ -127,11 +146,12 @@
 
 	// set to zero the output vector
 	int setOutputZero(double* Xr_o, double* Xi_o, int N){
-	for(int n=0; n < N;n++){
-	       Xr_o[n] = 0.0;
-	       Xi_o[n] = 0.0; 
-	    }
-		return 1;
+    #pragma omp parallel for
+    for(int n=0; n < N;n++){
+          Xr_o[n] = 0.0;
+          Xi_o[n] = 0.0; 
+        }
+      return 1;
 	}
 
 	// check if x = IDFT(DFT(x))
