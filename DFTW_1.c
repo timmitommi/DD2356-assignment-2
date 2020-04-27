@@ -36,7 +36,7 @@
 
 	int main(int argc, char* argv[]){
 	  // size of input array
-	  int N = 4; // 8,000 is a good number for testing
+	  int N = 8000; // 8,000 is a good number for testing
 	  printf("DFTW calculation with N = %d \n",N);
 	  
 	  // Allocate array for input vector
@@ -90,34 +90,25 @@
 	int DFT(int idft, double* xr, double* xi, double* Xr_o, double* Xi_o, int N){
 	  for (int k=0 ; k<N ; k++)
 	    {
-	        for (int n=0 ; n<N ; n++)  {
-	        	// Real part of X[k]
-	            Xr_o[k] += xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N);
-	            // Imaginary part of X[k]
-	            Xi_o[k] += -idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N);
-	        } 
-          printf("%f\n", Xi_o[k]);
           double thread_results_r[MAX_THREADS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
           double thread_results_i[MAX_THREADS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-          #pragma omp parallel for
+          
+          #pragma omp parallel for schedule(static)
           for (int n=0; n<N; n++) {
             int id = omp_get_thread_num();
             thread_results_r[id] += xr[n] * cos(n * k * PI2 / N) + idft*xi[n]*sin(n * k * PI2 / N);
             thread_results_i[id] += -idft*xr[n] * sin(n * k * PI2 / N) + xi[n] * cos(n * k * PI2 / N);
           }
 
-          double res = 0;
-          for (int i=0; i < 4; i++) {
-            res += thread_results_i[i];
+          for (int id=0; id < MAX_THREADS; id++) {
+            Xr_o[k] += thread_results_r[id];
+            Xi_o[k] += thread_results_i[id];
           }
-          printf("%f\n", res);
-
-          printf("%f %f %f %f\n", thread_results_i[0], thread_results_i[1], thread_results_i[2], thread_results_i[3]);
-          printf("--------------------------------------\n");
 	    }
 	    
 	    // normalize if you are doing IDFT
 	    if (idft==-1){
+        #pragma omp parallel for schedule(static)
 	    	for (int n=0 ; n<N ; n++){
 	    	Xr_o[n] /=N;
 	    	Xi_o[n] /=N;
@@ -146,7 +137,6 @@
 
 	// set to zero the output vector
 	int setOutputZero(double* Xr_o, double* Xi_o, int N){
-    #pragma omp parallel for
     for(int n=0; n < N;n++){
           Xr_o[n] = 0.0;
           Xi_o[n] = 0.0; 
