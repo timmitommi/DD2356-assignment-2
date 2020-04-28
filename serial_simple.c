@@ -3,6 +3,7 @@
 #include "time.h"   // time(0) to get random seed
 #include "math.h"  // sine and cosine
 #include "omp.h"   // openmp library like timing
+#include <string.h>
 
 #define DIM 2
 #define MAX_PARTICLES 500
@@ -14,6 +15,7 @@ typedef double vect_t[DIM];
 
 void computeForces(vect_t* pos, double* masses, vect_t* forces);
 void initParticles(vect_t* pos, vect_t* old_pos, vect_t* vel, double* masses);
+void move_particles(vect_t* pos, vect_t* vel, double* masses, vect_t* forces);
 
 int main(void) {
 
@@ -24,10 +26,25 @@ int main(void) {
   double* masses = (double*) malloc (MAX_PARTICLES*sizeof(double));
 
   initParticles(pos, old_pos, vel, masses);
-  computeForces(pos, masses, forces);
+  //computeForces(pos, masses, forces);
 
   for(int step = 0; step <= CYCLES/DELTA_T ; step++) {
-    printf("%d \n", step);
+    forces = memset(forces, 0, MAX_PARTICLES*sizeof(vect_t));
+    computeForces(pos, masses, forces);
+    move_particles(pos, vel, masses, forces);
+  }
+
+  for(int q = 0; q < MAX_PARTICLES; q++) {
+    printf("Particle%d -> X: %f, Y: %f, VelX: %f, VelY: %f\n", q+1, pos[q][1], pos[q][2], vel[q][0], vel[q][1]);
+  }
+}
+
+void move_particles(vect_t* pos, vect_t* vel, double* masses, vect_t* forces) {
+  for(int q = 0; q < MAX_PARTICLES; q++) {
+    pos[q][1] += DELTA_T*vel[q][1]; 
+    pos[q][2] += DELTA_T*vel[q][2]; 
+    vel[q][1] += DELTA_T/masses[q]*forces[q][1]; 
+    vel[q][2] += DELTA_T/masses[q]*forces[q][2];
   }
 }
 
@@ -54,8 +71,8 @@ void initParticles(vect_t* pos,vect_t* old_pos, vect_t* vel, double* masses) {
     pos[q][0] = (rand() / (double)(RAND_MAX)) * 2 - 1;
 		pos[q][1] = (rand() / (double)(RAND_MAX)) * 2 - 1;
 
-		old_pos[q][0] = -1;
-		old_pos[q][1] = -1;
+		//old_pos[q][0] = -1;
+		//old_pos[q][1] = -1;
 
 		vel[q][0] = (rand() / (double)(RAND_MAX)) * 2 - 1;
 		vel[q][1] = (rand() / (double)(RAND_MAX)) * 2 - 1;
