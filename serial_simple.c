@@ -4,6 +4,7 @@
 #include "math.h"  // sine and cosine
 #include "omp.h"   // openmp library like timing
 #include <string.h>
+#include <sys/time.h>
 
 #define DIM 2
 #define MAX_PARTICLES 500
@@ -13,26 +14,35 @@
 
 typedef double vect_t[DIM];
 
-void computeForces(vect_t* pos, double* masses, vect_t* forces);
-void initParticles(vect_t* pos, vect_t* old_pos, vect_t* vel, double* masses);
+void computeForcesSimple(vect_t* pos, double* masses, vect_t* forces);
+void computeForcesReduced(vect_t* pos, double* masses, vect_t* forces);
+void initParticles(vect_t* pos, vect_t* vel, double* masses);
 void move_particles(vect_t* pos, vect_t* vel, double* masses, vect_t* forces);
+double mysecond();
 
 int main(void) {
 
   vect_t* pos = (vect_t*) malloc (MAX_PARTICLES*sizeof(vect_t));
-  vect_t* old_pos = (vect_t*) malloc (MAX_PARTICLES*sizeof(vect_t));
   vect_t* vel = (vect_t*) malloc (MAX_PARTICLES*sizeof(vect_t));
   vect_t* forces = (vect_t*) malloc (MAX_PARTICLES*sizeof(vect_t));
   double* masses = (double*) malloc (MAX_PARTICLES*sizeof(double));
+  double t1, t2;
 
-  initParticles(pos, old_pos, vel, masses);
+  initParticles(pos, vel, masses);
   //computeForces(pos, masses, forces);
+
+  t1 = mysecond();
 
   for(int step = 0; step <= CYCLES/DELTA_T ; step++) {
     forces = memset(forces, 0, MAX_PARTICLES*sizeof(vect_t));
-    computeForces(pos, masses, forces);
+    computeForcesSimple(pos, masses, forces);
+    //computeForcesReduced(pos, masses, forces);
     move_particles(pos, vel, masses, forces);
   }
+
+  t2 = mysecond();
+
+  printf("Algorithm run time: %f s\n", t2-t1);
 
   for(int q = 0; q < MAX_PARTICLES; q++) {
     printf("Particle%d -> X: %f, Y: %f, VelX: %f, VelY: %f\n", q+1, pos[q][1], pos[q][2], vel[q][0], vel[q][1]);
@@ -48,7 +58,7 @@ void move_particles(vect_t* pos, vect_t* vel, double* masses, vect_t* forces) {
   }
 }
 
-void computeForces(vect_t* pos, double* masses, vect_t* forces) {
+void computeForcesSimple(vect_t* pos, double* masses, vect_t* forces) {
   for(int q = 0; q < MAX_PARTICLES; q++) {
     for(int k = 0; k < MAX_PARTICLES; k++) {
       if(k == q) {
@@ -65,20 +75,48 @@ void computeForces(vect_t* pos, double* masses, vect_t* forces) {
     }
   }
 }
+
+void computeForcesReduced(vect_t* pos, double* masses, vect_t* forces) {
+  vect_t force_qk;
+  for(int q = 0; q < MAX_PARTICLES; q++) {
+    for(int k=q+1; k < MAX_PARTICLES; k++) {
+      double x_diff = pos[q][0] - pos[k][0];
+      double y_diff = pos[q][1] - pos[k][1];
+
+      double dist = sqrt(x_diff*x_diff + y_diff*y_diff);
+      double dist_cubed = dist*dist*dist;
+
+      force_qk[0] = forces[q][0] -= G*masses[q]*masses[k]/dist_cubed * x_diff;
+      force_qk[1] = G*masses[q]*masses[k]/dist_cubed * y_diff;
+
+      forces[q][0] += force_qk[0];
+      forces[q][1] += force_qk[1];
+      forces[k][0] -= force_qk[0];
+      forces[k][1] -= force_qk[1];
+    }
+  }
+}
   
-void initParticles(vect_t* pos,vect_t* old_pos, vect_t* vel, double* masses) {
+void initParticles(vect_t* pos, vect_t* vel, double* masses) {
   for(int q = 0; q < MAX_PARTICLES; q++) {
     pos[q][0] = (rand() / (double)(RAND_MAX)) * 2 - 1;
 		pos[q][1] = (rand() / (double)(RAND_MAX)) * 2 - 1;
-
-		//old_pos[q][0] = -1;
-		//old_pos[q][1] = -1;
 
 		vel[q][0] = (rand() / (double)(RAND_MAX)) * 2 - 1;
 		vel[q][1] = (rand() / (double)(RAND_MAX)) * 2 - 1;
 		
 		masses[q] = fabs((rand() / (double)(RAND_MAX)) * 2 - 1);
   }
+}
+
+// function with timer                                                             
+double mysecond(){
+  struct timeval tp;
+  struct timezone tzp;
+  int i;
+
+  i = gettimeofday(&tp,&tzp);
+  return ( (double) tp.tv_sec + (double) tp.tv_usec * 1.e-6 );
 }
 
 
