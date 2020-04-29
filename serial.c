@@ -44,9 +44,9 @@ int main(void) {
 
   printf("Algorithm run time: %f s\n", t2-t1);
 
-  for(int q = 0; q < MAX_PARTICLES; q++) {
+  /*for(int q = 0; q < MAX_PARTICLES; q++) {
     printf("Particle%d -> X: %f, Y: %f, VelX: %f, VelY: %f\n", q+1, pos[q][1], pos[q][2], vel[q][0], vel[q][1]);
-  }
+  }*/
 }
 
 void move_particles(vect_t* pos, vect_t* vel, double* masses, vect_t* forces) {
@@ -86,9 +86,9 @@ void computeForcesReduced(vect_t* pos, double* masses, vect_t* forces) {
       double dist = sqrt(x_diff*x_diff + y_diff*y_diff);
       double dist_cubed = dist*dist*dist;
 
-      force_qk[0] = forces[q][0] -= G*masses[q]*masses[k]/dist_cubed * x_diff;
+      force_qk[0] = G*masses[q]*masses[k]/dist_cubed * x_diff;
       force_qk[1] = G*masses[q]*masses[k]/dist_cubed * y_diff;
-
+      
       forces[q][0] += force_qk[0];
       forces[q][1] += force_qk[1];
       forces[k][0] -= force_qk[0];
