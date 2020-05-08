@@ -47,7 +47,6 @@ int main() {
           maxlocs[id] = i;
         } 
       }
-    
   }
 
   maxloc = maxlocs[0];

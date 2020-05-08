@@ -13,7 +13,7 @@ double mysecond();
 typedef struct {
   double maxval;
   int maxloc;
-  char pad[128];
+  char pad[116];
 } thread_vals;
 
 int main() {
